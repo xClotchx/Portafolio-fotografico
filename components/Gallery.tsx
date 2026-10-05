@@ -55,8 +55,8 @@ export default function Gallery({ photos }: { photos: Photo[] }) {
   const [boot, setBoot] = useState(true), [cur, setCur] = useState(-1), [loaded, setLoaded] = useState(0);
   const [ui, setUi] = useState(true), [map, setMap] = useState(false), [clock, setClock] = useState('--:--:--');
   const [online, setOnline] = useState(true), [visits, setVisits] = useState(1), [fresh, setFresh] = useState<Set<string>>(new Set());
-  const [fav, setFav] = useState<Set<string>>(new Set()), [onlyFav, setOnlyFav] = useState(false), [scrub, setScrub] = useState(-1), [burst, setBurst] = useState<{ k: number; x: number; y: number } | null>(null);
-  const done = useRef(false), bar = useRef<HTMLDivElement>(null), rail = useRef<HTMLDivElement>(null), tap = useRef({ t: 0, id: 0 });
+  const [fav, setFav] = useState<Set<string>>(new Set()), [onlyFav, setOnlyFav] = useState(false), [burst, setBurst] = useState<{ k: number; x: number; y: number } | null>(null);
+  const done = useRef(false), bar = useRef<HTMLDivElement>(null), tap = useRef({ t: 0, id: 0 });
 
   useEffect(() => { const t = setTimeout(() => setBoot(false), 2300); return () => clearTimeout(t); }, []);
   useEffect(() => {
@@ -96,7 +96,8 @@ export default function Gallery({ photos }: { photos: Photo[] }) {
 
   const go = (i: number) => (i < 0 ? document.getElementById('top') : document.getElementById(`f${Math.min(i, n - 1)}`))?.scrollIntoView({ behavior: 'smooth' });
   const like = (id: string, force?: boolean) => setFav((f) => { const g = new Set(f); if (force || !g.has(id)) g.add(id); else g.delete(id); LS.set('ry:fav', JSON.stringify([...g])); navigator.vibrate?.(10); return g; });
-  // Teclado (computadora): ↑↓←→ / j k, F favorita, M mapa
+  
+  // Teclado (computadora)
   useEffect(() => {
     if (map) return;
     const k = (e: KeyboardEvent) => {
@@ -108,6 +109,7 @@ export default function Gallery({ photos }: { photos: Photo[] }) {
     };
     addEventListener('keydown', k); return () => removeEventListener('keydown', k);
   });
+
   const jump = (i: number) => { setMap(false); setTimeout(() => document.getElementById(`f${i}`)?.scrollIntoView(), 30); };
   const onTap = (e: RM, id: string) => {
     const now = Date.now(), r = e.currentTarget.getBoundingClientRect();
@@ -121,7 +123,7 @@ export default function Gallery({ photos }: { photos: Photo[] }) {
   };
   const untilt = (e: PointerEvent) => { e.currentTarget.removeAttribute('style'); };
   const share = (p: Photo) => { const d = { title: brand.name, text: p.alt, url: location.href }; if (navigator.share) navigator.share(d).catch(() => {}); else navigator.clipboard?.writeText(d.url); };
-  const at = (e: PointerEvent) => { const r = rail.current!.getBoundingClientRect(), i = Math.max(0, Math.min(n - 1, Math.round(((e.clientY - r.top) / r.height) * (n - 1)))); setScrub(i); document.getElementById(`f${i}`)?.scrollIntoView({ behavior: 'instant' as ScrollBehavior }); };
+  
   const letters = Array.from(brand.name);
   const Heart = ({ on }: { on: boolean }) => <svg viewBox="0 0 24 24" className="h-5 w-5" fill={on ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d={HEART} /></svg>;
 
@@ -146,12 +148,11 @@ export default function Gallery({ photos }: { photos: Photo[] }) {
             <span className="hidden gap-4 text-[var(--fg)]/40 lg:flex"><span>↑↓ navegar</span><span>F favorita</span><span>M mapa</span></span>
             {cur >= 0 ? `${pad(cur + 1)} / ${pad(n)}` : 'inicio'}
           </span>
-
         </div>
         <div className="h-px w-full bg-white/10"><div ref={bar} className="h-[2px] origin-left bg-[var(--acid)] shadow-[0_0_12px_var(--acid)]" style={{ transform: 'scaleX(0)' }} /></div>
       </header>
 
-      {/* Inicio: columna en móvil, dos columnas en computadora */}
+      {/* Inicio */}
       <section id="top" data-i="-1" className="relative flex min-h-svh flex-col items-center justify-between overflow-hidden px-5 pb-8 pt-[max(5.5rem,calc(env(safe-area-inset-top)+4.5rem))] lg:grid lg:grid-cols-[1.1fr_.9fr] lg:grid-rows-[1fr_auto] lg:gap-x-10 lg:px-16 lg:pb-14 lg:pt-28">
         <div className="aurora" aria-hidden="true"><i /><i /><i /></div>
         <h1 className="relative z-10 text-center text-[clamp(3.6rem,23vw,11rem)] font-bold uppercase leading-[.9] tracking-[-.05em] lg:self-end lg:text-left lg:text-[min(11vw,11rem)]" aria-label={brand.name}>
@@ -180,22 +181,23 @@ export default function Gallery({ photos }: { photos: Photo[] }) {
           <Img src={p.thumb} alt="" aria-hidden="true" loading="lazy" decoding="async" className="bg" />
           <span className="big mono" aria-hidden="true">{pad(i + 1, 2)}</span>
           <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/75" aria-hidden="true" />
-          <figure className="ph relative z-10 m-0 px-4" onClick={(e) => onTap(e, p.id)}>
+          <figure className="ph relative z-10 m-0 px-4 pt-10 pb-16 lg:py-0" onClick={(e) => onTap(e, p.id)}>
             {burst && cur === i && <svg key={burst.k} className="heart" style={{ left: burst.x, top: burst.y }} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={HEART} /></svg>}
             <div className="tilt" data-hover="" onPointerMove={tilt} onPointerLeave={untilt}>
               <Img src={p.full} fallback={p.src} alt={p.alt} loading={i < 2 ? 'eager' : 'lazy'} decoding="async" draggable={false} onLoad={() => setLoaded((l) => l + 1)}
-                className="max-h-[70svh] max-w-[calc(100vw-2rem)] select-none object-contain ring-1 ring-white/15 lg:max-h-[82svh] lg:max-w-[min(62vw,1100px)]" />
+                className="max-h-[62svh] max-w-[calc(100vw-2rem)] select-none object-contain ring-1 ring-white/15 lg:max-h-[82svh] lg:max-w-[min(62vw,1100px)]" />
             </div>
           </figure>
-          <div className="hud mono absolute inset-x-0 bottom-0 flex items-end justify-between px-4 pb-[max(1.2rem,env(safe-area-inset-top))] text-[11px] uppercase lg:px-12 lg:pb-10">
-            <div className="rv glass mb-14 mr-3 min-w-0 flex-1 rounded-2xl p-3 lg:mb-0 lg:max-w-xs lg:flex-none lg:p-5" style={sty({ '--d': '.25s' })}>
-              <p className="text-2xl font-medium tabular-nums leading-none text-[var(--acid)] lg:text-4xl">{pad(i + 1)}</p>
-              <p className="mt-1.5 truncate normal-case text-[13px] text-[var(--fg)]/80 lg:mt-3 lg:text-base">{p.alt}</p>
-              {fresh.has(p.id) && <p className="mt-2 inline-block rounded-full bg-[var(--acid)] px-2 py-0.5 font-medium text-black">nueva</p>}
+          
+          {/* HUD inferior adaptado para móvil y escritorio sin solapamientos */}
+          <div className="hud mono absolute inset-x-0 bottom-0 flex items-end justify-between px-4 pb-[max(1.2rem,env(safe-area-inset-top))] text-[11px] uppercase lg:px-12 lg:pb-10 pointer-events-none">
+            <div className="pointer-events-auto rv glass mb-2 mr-3 min-w-0 flex-1 rounded-2xl p-2.5 lg:mb-0 lg:max-w-xs lg:flex-none lg:p-5" style={sty({ '--d': '.25s' })}>
+              <p className="text-xl font-medium tabular-nums leading-none text-[var(--acid)] lg:text-4xl">{pad(i + 1)}</p>
+              {fresh.has(p.id) && <p className="mt-1 inline-block rounded-full bg-[var(--acid)] px-2 py-0.5 font-medium text-black text-[9px]">nueva</p>}
             </div>
-            <div className="rv mb-14 flex flex-col gap-2 lg:mb-0 lg:flex-row" style={sty({ '--d': '.4s' })}>
-              <button onClick={() => like(p.id)} aria-pressed={fav.has(p.id)} aria-label="Favorita" className={`tap glass grid h-12 w-12 place-items-center rounded-full ${fav.has(p.id) ? 'text-[var(--acid)]' : ''}`}><Heart on={fav.has(p.id)} /></button>
-              <button onClick={() => share(p)} aria-label="Compartir" className="tap glass grid h-12 w-12 place-items-center rounded-full"><svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7" /></svg></button>
+            <div className="pointer-events-auto rv mb-2 flex items-center gap-2 lg:mb-0 lg:flex-row" style={sty({ '--d': '.4s' })}>
+              <button onClick={() => like(p.id)} aria-pressed={fav.has(p.id)} aria-label="Favorita" className={`tap glass grid h-11 w-11 place-items-center rounded-full ${fav.has(p.id) ? 'text-[var(--acid)]' : ''}`}><Heart on={fav.has(p.id)} /></button>
+              <button onClick={() => share(p)} aria-label="Compartir" className="tap glass grid h-11 w-11 place-items-center rounded-full"><svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7" /></svg></button>
             </div>
           </div>
         </section>
@@ -207,16 +209,6 @@ export default function Gallery({ photos }: { photos: Photo[] }) {
         <p className="mono relative text-[11px] uppercase text-[var(--fg)]/55">fin del archivo · {n} fotogramas{fav.size ? ` · ${fav.size} ♥` : ''}</p>
         <a href="#top" className="tap mono relative flex h-12 items-center rounded-full border border-white/25 px-6 text-[12px] uppercase active:bg-white active:text-black hover:bg-white hover:text-black">Volver al inicio ↑</a>
       </footer>
-
-      {/* Riel de recorrido rápido */}
-      {n > 1 && cur >= 0 && (
-        <div ref={rail} className="rail hud fixed right-0 top-1/2 z-30 h-[44svh] w-9 -translate-y-1/2" role="slider" aria-label="Recorrer fotos" aria-valuemin={1} aria-valuemax={n} aria-valuenow={cur + 1}
-          onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); at(e); }} onPointerMove={(e) => scrub >= 0 && at(e)} onPointerUp={() => setScrub(-1)} onPointerCancel={() => setScrub(-1)}>
-          <div className="absolute right-3 top-0 h-full w-px bg-white/15" />
-          <div className="absolute right-[9px] h-2 w-2 rounded-full bg-[var(--acid)] shadow-[0_0_10px_var(--acid)] transition-[top] duration-300" style={{ top: `calc(${(cur / (n - 1)) * 100}% - 4px)` }} />
-          <div className="rail-bubble glass mono absolute right-8 grid h-10 min-w-10 place-items-center rounded-full px-3 text-sm tabular-nums" style={{ top: `calc(${(Math.max(scrub, 0) / (n - 1)) * 100}% - 20px)`, opacity: scrub >= 0 ? 1 : 0 }}>{pad(Math.max(scrub, 0) + 1)}</div>
-        </div>
-      )}
 
       {/* Mapa */}
       <button onClick={() => setMap(true)} aria-label="Abrir mapa de fotos" className="hud glass tap mono fixed bottom-[max(1.2rem,env(safe-area-inset-top))] right-4 z-40 flex h-12 items-center gap-2 rounded-full px-4 text-[11px] font-medium uppercase lg:bottom-auto lg:right-10 lg:top-20">
